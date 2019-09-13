@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  23 August 2019
+  3 September 2019
 
   POST /openehr/heading/:heading/:patientId
 
@@ -76,11 +76,15 @@ module.exports = function(args, finished) {
   console.log('heading: ' + heading);
   console.log('templateId: ' + templateId);
 
-  data.now = new Date().toISOString();
-  data.composer = args.session.firstName + ' ' + args.session.lastName;
-
-  var template = require('../../templates/' + heading + '/' + format + '_to_openehr.json');
-  var json = transform(template, data, headingHelpers);
+  if (format !== 'openehr') {
+    data.now = new Date().toISOString();
+    data.composer = args.session.firstName + ' ' + args.session.lastName;
+  }
+  var json = data;
+  if (format !== 'openehr') {
+    var template = require('../../templates/' + heading + '/' + format + '_to_openehr.json');
+    json = transform(template, data, headingHelpers);
+  }
   var flatJson = flatten(json);
 
   postPatientCompositionByTemplateId.call(this, patientId, templateId, flatJson, args, function(response) {

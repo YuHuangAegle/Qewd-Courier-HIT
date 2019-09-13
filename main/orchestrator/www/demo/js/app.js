@@ -24,18 +24,36 @@ function getHeaders() {
   };
 }
 
+function isNumeric(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+function rev(str) {
+  return str.split('').reverse().join('');
+}
+
+function hideForms() {
+  $('#demographicsForm').hide();
+  $('#allergyForm').hide();
+  $('#flatJSONForm').hide();
+  $('#headingJSONForm').hide();
+  $('#getHeadingForm').hide();
+  $('#getSchemaForm').hide();
+  $('#editBtn').hide();
+  $('#mpiBtn').show();
+}
+
 $(document).ready(function() {
 
   var jwt;
   var patient;
+  var headings = {};
+  var transforms = {};
 
   $('#header').hide();
   $('#whenLoggedIn').hide();
-  $('#editBtn').hide();
-  $('#mpiBtn').show();
-  $('#demographicsForm').hide();
+  hideForms();
   $('#newPatient').hide();
-  $('#allergyForm').hide();
 
   // fire off the /auth/redirect request every time
   // index.html is loaded
@@ -64,6 +82,94 @@ $(document).ready(function() {
     if (data.authenticated) {
 
       // user is authenticated, so begin display
+
+      // fetch registered headings
+
+      $.ajax({
+        url: '/openehr/headings',
+        headers: getHeaders()
+      })
+      .done(function(data) {
+        headings = data.headings;
+        var firstHeading;
+        for (var heading in headings) {
+          if (!firstHeading) firstHeading = heading;
+          $('#headingNameInput').append($('<option>', { 
+            value: heading,
+            text : heading 
+          }));
+          $('#getHeadingName').append($('<option>', { 
+            value: heading,
+            text : heading 
+          }));
+          $('#getSchemaHeadingName').append($('<option>', { 
+            value: heading,
+            text : heading 
+          }));
+        }
+
+        // fetch input transform names
+
+        $.ajax({
+          url: '/openehr/transforms?filter=inputAndOutput',
+          headers: getHeaders()
+        })
+        .done(function(data) {
+          console.log('getTransforms response: ' + JSON.stringify(data, null, 2));
+          transforms = data.transforms;
+          transforms[firstHeading]['input'].forEach(function(transform) {
+            $('#headingInputTransform').append($('<option>', { 
+              value: transform,
+              text : transform 
+            }));
+          });
+
+          transforms[firstHeading]['output'].forEach(function(transform) {
+            $('#getHeadingOutputFormat').append($('<option>', { 
+              value: transform,
+              text : transform 
+            }));
+          });
+
+          $('#headingNameInput').change(function(){
+             //alert('Selected value: ' + $(this).val());
+            $('#headingInputTransform').children().remove();
+            if (!transforms[$(this).val()]) {
+              transforms[$(this).val()] = {
+                input: ['openehr'],
+                output: ['openehr']
+              };
+            }
+            transforms[$(this).val()]['input'].forEach(function(transform) {
+              $('#headingInputTransform').append($('<option>', { 
+                value: transform,
+                text : transform 
+              }));
+            });
+          });
+
+          $('#getHeadingName').change(function(){
+             //alert('Selected value: ' + $(this).val());
+            $('#getHeadingOutputFormat').children().remove();
+            if (!transforms[$(this).val()]) {
+              transforms[$(this).val()] = {
+                input: ['openehr'],
+                output: ['openehr']
+              };
+            }
+            transforms[$(this).val()]['output'].forEach(function(transform) {
+              $('#getHeadingOutputFormat').append($('<option>', { 
+                value: transform,
+                text : transform 
+              }));
+            });
+          });
+
+        });
+
+      });
+
+      // set up display
 
       $('#header').show();
       $('#demographicsForm').hide();
@@ -108,10 +214,9 @@ $(document).ready(function() {
     })
     .done(function(data) {
       console.log('mpi response: ' + JSON.stringify(data, null, 2));
-      $('#demographicsForm').hide();
-      $('#allergyForm').hide();
-      $('#editBtn').show();
+      hideForms();
       $('#mpiBtn').hide();
+      $('#editBtn').show();
       patient = data.patient;
       $('#content').show();
       $('#contentTitle').text("Demographics (FHIR)");
@@ -130,8 +235,6 @@ $(document).ready(function() {
         $('#birthDate').val('');
         $('#country').val('United Kingdom');
         $('#demographicsForm').show();
-        $('#editBtn').hide();
-        $('#mpiBtn').hide();
         $('#newPatient').show();
       }
     });
@@ -202,47 +305,22 @@ $(document).ready(function() {
     $('#postalCode').val(patient.address[0].postalCode);
     $('#country').val(patient.address[0].country);
 
+    hideForms();
     $('#demographicsForm').show();
-    $('#content').hide();
-    $('#allergyForm').hide();
-    $('#editBtn').hide();
     $('#mpiBtn').hide();
+    $('#editBtn').show();
+    $('#content').hide();
     $('#newPatient').hide();
     $('#contentTitle').text("Edit Demographics Data");
   });
 
   $('#cancelEditBtn').on('click', function(e) {
-    $('#demographicsForm').hide();
-    $('#allergyForm').hide();
-    $('#mpiBtn').show();
-    $('#editBtn').hide();
+    hideForms();
     $('#content').show();    
     $('#contentTitle').text("");
     $('#content').text("");
   });
 
-
-  $('#getAllergiesBtn').on('click', function(e) {
-    console.log('get allergies..');
-    $('#contentTitle').text("Fetching allergies from OpenEHR. Please wait...");
-    $.ajax({
-      url: '/openehr/heading/allergies/' + jwt.openid.userId,
-      method: 'GET',
-      headers: getHeaders()
-    })
-    .done(function(data) {
-      $('#demographicsForm').hide();
-      $('#allergyForm').hide();
-      $('#editBtn').hide();
-      $('#mpiBtn').show();
-      $('#contentTitle').text("Allergy Data (from OpenEHR in Un-Flat JSON format)");
-      $('#content').show();
-      $('#content').text(JSON.stringify(data.data, null, 2));  
-    })
-    .fail(function(error) {
-      console.log('Error fetching allergies: ' + error);
-    });
-  });
 
   $('#getTemplatesBtn').on('click', function(e) {
     $('#contentTitle').text("Fetching Template List from OpenEHR. Please wait...");
@@ -252,10 +330,8 @@ $(document).ready(function() {
       headers: getHeaders()
     })
     .done(function(data) {
-      $('#editBtn').hide();
+      hideForms();
       $('#mpiBtn').show();
-      $('#demographicsForm').hide();
-      $('#allergyForm').hide();
       $('#contentTitle').text("Templates on your OpenEHR System");
       $('#content').show();
       $('#content').text(JSON.stringify(data.templates, null, 2));  
@@ -265,51 +341,9 @@ $(document).ready(function() {
     });
   });
 
-  $('#getAllergySchemaBtn').on('click', function(e) {
-    $('#contentTitle').text("Fetching allergy schema from OpenEHR. Please wait...");
-    $.ajax({
-      url: '/openehr/schema/allergies/',
-      method: 'GET',
-      headers: getHeaders()
-    })
-    .done(function(data) {
-      $('#editBtn').hide();
-      $('#mpiBtn').show();
-      $('#demographicsForm').hide();
-      $('#allergyForm').hide();
-      $('#contentTitle').text("Allergy Flat JSON Template (from OpenEHR)");
-      $('#content').show();
-      $('#content').text(JSON.stringify(data.schema, null, 2));  
-    })
-    .fail(function(error) {
-      console.log('Error fetching allergy schema: ' + error);
-    });
-  });
-
-  $('#getAllergiesFHIRBtn').on('click', function(e) {
-    $('#contentTitle').text('Fetching from OpenEHR as FHIR. Please wait...');  
-    $.ajax({
-      url: '/openehr/heading/allergies/' + jwt.openid.userId + '?format=fhir',
-      method: 'GET',
-      headers: getHeaders()
-    })
-    .done(function(data) {
-      $('#editBtn').hide();
-      $('#mpiBtn').show();
-      $('#demographicsForm').hide();
-      $('#allergyForm').hide();
-      $('#contentTitle').text("Allergy Data (from OpenEHR in FHIR format)");
-      $('#content').show();
-      $('#content').text(JSON.stringify(data.data, null, 2));  
-    })
-    .fail(function(error) {
-      console.log('Error fetching allergies: ' + error);
-    });
-  });
-
   $('#addAllergyBtn').on('click', function(e) {
+    hideForms();
     $('#allergyForm').show();
-    $('#demographicsForm').hide();
     $('#content').hide();
     $('#contentTitle').text('Add an Allergy');
     if ($('#allergy_causative_agent_code').val() === '') {
@@ -322,11 +356,98 @@ $(document).ready(function() {
     $('#allergy_manifestation_terminology').val('SNOMED-CT');
   });
 
+  $('#getHeadingBtn').on('click', function(e) {
+    hideForms();
+    $('#getHeadingForm').show();
+    $('#content').hide();
+    $('#contentTitle').text('');
+  });
+
+  $('#getHeadingGoBtn').on('click', function(e) {
+    var heading = $('#getHeadingName').val();
+    var format = $('#getHeadingOutputFormat').val();
+
+    $('#contentTitle').text('Fetching ' + heading + ' from OpenEHR. Please wait...');
+    $.ajax({
+      url: '/openehr/heading/' + heading + '/' + jwt.openid.userId + '?format=' + format,
+      method: 'GET',
+      headers: getHeaders()
+    })
+    .done(function(data) {
+      delete data.token;
+      hideForms();
+      $('#mpiBtn').show();
+      $('#contentTitle').text(heading + ' data (from OpenEHR in ' + format + ' format)');
+      $('#content').show();
+      $('#content').text(JSON.stringify(data, null, 2));
+    })
+    .fail(function(error) {
+      console.log('Error fetching ' + heading + ': ' + error);
+    });
+  });
+
+  $('#cancelgetHeadingBtn').on('click', function(e) {
+    hideForms();
+    $('#content').show();    
+    $('#contentTitle').text("");
+    $('#content').text("");
+  });
+
+  $('#getSchemaBtn').on('click', function(e) {
+    hideForms();
+    $('#getSchemaForm').show();
+    $('#content').hide();
+    $('#contentTitle').text('');
+  });
+
+  $('#cancelGetSchemaBtn').on('click', function(e) {
+    hideForms();
+    $('#content').show();    
+    $('#contentTitle').text("");
+    $('#content').text("");
+  });
+
+  $('#getSchemaGoBtn').on('click', function(e) {
+    var heading = $('#getSchemaHeadingName').val();
+    var format = $('#getSchemaFormat').val();
+    var type = 'Input';
+    if (format === 'out') type = 'Output';
+    $('#contentTitle').text('Fetching ' + heading + ' ' + type + ' Schema from OpenEHR. Please wait...');
+    $.ajax({
+      url: '/openehr/schema/' + heading + '?format=' + format,
+      method: 'GET',
+      headers: getHeaders()
+    })
+    .done(function(data) {
+      hideForms();
+      $('#contentTitle').text(heading + ' ' + type + ' Unflattened Flat JSON Template (from OpenEHR)');
+      $('#content').show();
+      $('#content').text(JSON.stringify(data.schema, null, 2));  
+    })
+    .fail(function(error) {
+      console.log('Error fetching ' + heading + ' ' + type + ' Schema: ' + error);
+    });
+  });
+
+
+  $('#addHeadingBtn').on('click', function(e) {
+    hideForms();
+    $('#headingJSONForm').show();
+    $('#content').hide();
+    $('#contentTitle').text('');
+  });
+
   $('#cancelAllergyBtn').on('click', function(e) {
-    $('#demographicsForm').hide();
-    $('#allergyForm').hide();
+    hideForms();
     $('#mpiBtn').show();
-    $('#editBtn').hide();
+    $('#content').show();    
+    $('#contentTitle').text("");
+    $('#content').text("");
+  });
+
+  $('#cancelHeadingBtn').on('click', function(e) {
+    hideForms();
+    $('#mpiBtn').show();
     $('#content').show();    
     $('#contentTitle').text("");
     $('#content').text("");
@@ -368,14 +489,147 @@ $(document).ready(function() {
     .done(function(data) {
       console.log('OpenEHR POST response: ' + JSON.stringify(data, null, 2));
       alert('Allergy saved');
-      $('#getAllergiesBtn').click();
+      $('#getAllergiesRawBtn').click();
     })
     .fail(function(error) {
       console.log('Allergy POST error: ' + error.responseJSON.error);
       alert(error.responseJSON.error);
-      $('#allergyForm').hide();
+      hideForms();
     });
 
   });
 
+  $('#saveHeadingBtn').on('click', function(e) {
+    var data = $('#headingJSONInput').val();
+    var heading = $('#headingNameInput').val();
+    var format = $('#headingInputTransform').val();
+
+    var message = {
+      dataType: 'json',
+      data: data,
+      contentType: 'application/json',
+      headers: getHeaders()
+    };
+
+    message.url = '/openehr/heading/' + heading + '/' + jwt.openid.userId + '?format=' + format;
+    message.method = 'POST';
+
+    $.ajax(message)
+    .done(function(data) {
+      console.log('OpenEHR POST response: ' + JSON.stringify(data, null, 2));
+      alert(heading + ' record saved');
+      $('#getAllergiesRawBtn').click();
+    })
+    .fail(function(error) {
+      console.log(heading + ' POST error: ' + error.responseJSON.error);
+      alert(error.responseJSON.error);
+      hideForms();
+    });
+
+  });
+
+  $('#unFlattenBtn').on('click', function(e) {
+    hideForms();
+    $('#flatJSONForm').show();
+    $('#content').show();    
+    $('#contentTitle').text("");
+    $('#content').text("");
+  });
+
+  $('#unFlattenItBtn').on('click', function(e) {
+    var flatJSON = $('#flatJSON').val();
+    try {
+      flatJSON = JSON.parse(flatJSON);
+      var unflatJSON = unflatten(flatJSON);
+      hideForms();
+      $('#content').show();  
+      $('#contentTitle').text("Unflattened version of your JSON");
+      $('#content').text(JSON.stringify(unflatJSON, null, 2));
+    }
+    catch(err) {
+      alert('Unable to parse that JSON');
+    }
+  });
+
+  $('#getJWTBtn').on('click', function(e) {
+    hideForms();
+    $('#contentTitle').text("Current JWT");
+    $('#content').show();
+    $('#content').html(getCookie('JSESSIONID') + '<br /> <br />'); 
+  });
+
 });
+
+
+function unflatten(flatJson) {
+  var value;
+  var json = {};
+
+  for (var path in flatJson) {
+    value = flatJson[path];
+
+    // pre-process to sort out | anomalies
+
+    if (path.indexOf('|') !== -1) {
+      var pieces = path.split('|');
+      var prev;
+      var lc;
+      var found = false;
+      var xpcs;
+      var prevRev;
+      for (var i = 1; i < pieces.length; i++) {
+        prev = pieces[i - 1];
+        lc = prev[prev.length - 1];
+        if (isNumeric(lc)) {
+          prevRev = rev(prev);
+          xpcs = prevRev.split(':');
+          if (isNumeric(rev(xpcs[0]))) {
+            pieces[0] = pieces[0] + '/';
+            found = true;
+          }
+        }
+      }
+      if (found) {
+        path = pieces.join('|');
+      }
+    }
+
+    // now begin processing
+
+    pieces = path.split('/');
+    var ref = json;
+    var lastIndex = pieces.length - 1;
+    pieces.forEach(function(piece, ix) {
+      var pieces = piece.split(':');
+      var name = pieces[0];
+      var index = pieces[1];
+      if (typeof index === 'undefined') {
+        if (typeof ref[name] === 'undefined') {
+          if (ix === lastIndex) {
+            ref[name] = value;
+          }
+          else {
+            ref[name] = {};
+          }
+        }
+        ref = ref[name];
+      }
+      else {
+        if (typeof ref[name] === 'undefined') {
+          ref[name] = [];
+          if (ix === lastIndex) {
+            ref[name][index] = value;
+          }
+          else {
+            ref[name][index] = {};
+          }
+        }
+        if (typeof ref[name][index] === 'undefined') {
+          ref[name][index] = {};
+        }
+        ref = ref[name][index];
+      }
+    });
+  }
+  return json;
+}

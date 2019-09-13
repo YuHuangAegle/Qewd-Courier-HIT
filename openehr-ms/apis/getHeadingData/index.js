@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  23 August 2019
+  13 September 2019
 
   GET /openehr/heading/:heading/:patientId
 
@@ -43,9 +43,9 @@ var transform = require('qewd-transform-json').transform;
 module.exports = function(args, finished) {
 
   var patientId = args.patientId;
-  if (!isNumeric(patientId)) {
-    return finished({error: 'Invalid patient Id'});
-  }
+  //if (!isNumeric(patientId)) {
+  //  return finished({error: 'Invalid patient Id'});
+  //}
 
   // Only IDCR users can access other NHS Numbers. Get the user's role and 
   // NHS Number from the decoded JWT (args.session)
@@ -63,11 +63,13 @@ module.exports = function(args, finished) {
 
   var patientName = args.session.firstName + ' ' + args.session.lastName;
 
-  var format = args.req.query.format;
+  var format = args.req.query.format || 'ui';
   var selectedUid;
   var sourceIdMap = args.req.qewdSession.data.$(['openEHR', 'sourceIdMap']);
 
-  if (format === 'pulsetile_detail') {
+  //console.log('format = ' + format + '; uid = ' + args.req.query.uid);
+
+  if (format === 'pulsetile_detail' && args.req.query.uid) {
     selectedUid = args.req.query.uid;
     var mappedUid = sourceIdMap.$(selectedUid);
 
@@ -75,13 +77,16 @@ module.exports = function(args, finished) {
       //selectedUid = selectedUid.split('ethercis-')[1] + '::local.ethercis.com::1';
       selectedUid = mappedUid.value;
     }
-    console.log('** pulsetile_detail - selectedUid = ' + selectedUid);
+    else {
+      return finished({error: 'Source Id ' + args.req.query.uid + ' was not recognised'});
+    }
+    //console.log('** pulsetile_detail - selectedUid = ' + selectedUid);
   }
 
   var _this = this;
   //var templateId = this.openehr.headings[heading].templateId;
-  console.log('patientId: ' + patientId);
-  console.log('heading: ' + heading);
+  //console.log('patientId: ' + patientId);
+  //console.log('heading: ' + heading);
   //console.log('templateId: ' + templateId);
   getPatientCompositionsByHeading.call(this, patientId, heading, args, function(response) {
 
@@ -115,18 +120,35 @@ module.exports = function(args, finished) {
       var record;
       var uid;
 
+      //console.log('format = ' + format + '; selectedUid = ' + selectedUid);
+
+      if (format === 'pulsetile_detail' && selectedUid) {
+        //console.log('specific pulsetile_detail record');
+        record = results[selectedUid];
+        record.uid = selectedUid;
+        record.sourceId = args.req.query.uid;
+        record.patientId = patientId;
+        record.patientName = patientName;
+        return finished(transform(template, record, headingHelpers));
+      }
+
+      //console.log('looping through and transforming all results');
+
       for (uid in results) {
-        if (format !== 'pulsetile_detail' || uid === selectedUid) {
-          record = results[uid];
-          record.uid = uid;
-          if (format === 'pulsetile_summary' || format === 'pulsetile_detail') {
-            record.sourceId = 'ethercis-' + uid.split('::')[0];
-            sourceIdMap.$(record.sourceId).value = uid;
-          }
-          record.patientId = patientId;
-          record.patientName = patientName;
-          transformedData[uid] = transform(template, record, headingHelpers);
+        //console.log('uid = ' + uid);
+
+        record = results[uid];
+        record.uid = uid;
+        if (format === 'pulsetile_synopsis' || format === 'pulsetile_summary' || format === 'pulsetile_detail') {
+          // set up sourceId to full uid mapping in session cache
+
+          record.sourceId = 'ethercis-' + uid.split('::')[0];
+          sourceIdMap.$(record.sourceId).value = uid;
         }
+
+        record.patientId = patientId;
+        record.patientName = patientName;
+        transformedData[uid] = transform(template, record, headingHelpers);
       }
       if (format === 'summaryHeadings') {
         var summary = [];
@@ -154,11 +176,7 @@ module.exports = function(args, finished) {
         }
         return finished({return_as_array: results});
       }
-      if (format === 'pulsetile_detail') {
-        console.log('&&& pulsetile_detail - selectedUid = ' + selectedUid);
-        console.log('&&& transformedData = ' + JSON.stringify(transformedData, null, 2));
-        return finished(transformedData[selectedUid]);
-      }
+
       if (format === 'fhir') {
         var bundle = {
           resourceType: 'Bundle',

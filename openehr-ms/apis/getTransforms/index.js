@@ -24,87 +24,58 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  2 September 2019
+  3 September 2019
 
 */
 
-function isNumeric(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
-}
+var fs = require('fs');
 
-function rev(str) {
-  return str.split('').reverse().join('');
-}
+module.exports = function(args, finished) {
 
-module.exports = function(flatJson) {
-  var value;
-  var json = {};
+  var filter = args.req.query.filter || 'all';
 
-  for (var path in flatJson) {
-    value = flatJson[path];
-
-    // pre-process to sort out | anomalies
-
-    if (path.indexOf('|') !== -1) {
-      var pieces = path.split('|');
-      var prev;
-      var lc;
-      var found = false;
-      var xpcs;
-      var prevRev;
-      for (var i = 1; i < pieces.length; i++) {
-        prev = pieces[i - 1];
-        lc = prev[prev.length - 1];
-        if (isNumeric(lc)) {
-          prevRev = rev(prev);
-          xpcs = prevRev.split(':');
-          if (isNumeric(rev(xpcs[0]))) {
-            pieces[0] = pieces[0] + '/';
-            found = true;
+  var transforms = {};
+  var folder = __dirname + '/../../templates';
+  var headings = fs.readdirSync(folder);
+  headings.forEach(function(heading) {
+    transforms[heading] = [];
+    var dir = folder + '/' + heading;
+    var files = fs.readdirSync(dir);
+    if (filter === 'all') {
+      transforms[heading] = files;
+    }
+    else {
+      if (filter === 'input') {
+        files.forEach(function(file) {
+          if (file.indexOf('_to_openehr.json') !== -1) {
+            var name = file.split('_to_openehr.json')[0];
+            transforms[heading].push(name);
           }
-        }
+        });
+        transforms[heading].push('openehr');
       }
-      if (found) {
-        path = pieces.join('|');
+      if (filter === 'inputAndOutput') {
+        transforms[heading] = {
+          input: [],
+          output: []
+        };
+        files.forEach(function(file) {
+          if (file.indexOf('_to_openehr.json') !== -1) {
+            var name = file.split('_to_openehr.json')[0];
+            transforms[heading]['input'].push(name);
+          }
+          if (file.startsWith('openehr_to_')) {
+            var name = file.split('openehr_to_')[1];
+            name = name.split('.json')[0];
+            transforms[heading]['output'].push(name);
+          }
+        });
+        transforms[heading]['input'].push('openehr');
+        transforms[heading]['output'].push('openehr');
       }
     }
+  });
 
-    // now begin processing
+  finished({transforms: transforms});
 
-    pieces = path.split('/');
-    var ref = json;
-    var lastIndex = pieces.length - 1;
-    pieces.forEach(function(piece, ix) {
-      var pieces = piece.split(':');
-      var name = pieces[0];
-      var index = pieces[1];
-      if (typeof index === 'undefined') {
-        if (typeof ref[name] === 'undefined') {
-          if (ix === lastIndex) {
-            ref[name] = value;
-          }
-          else {
-            ref[name] = {};
-          }
-        }
-        ref = ref[name];
-      }
-      else {
-        if (typeof ref[name] === 'undefined') {
-          ref[name] = [];
-          if (ix === lastIndex) {
-            ref[name][index] = value;
-          }
-          else {
-            ref[name][index] = {};
-          }
-        }
-        if (typeof ref[name][index] === 'undefined') {
-          ref[name][index] = {};
-        }
-        ref = ref[name][index];
-      }
-    });
-  }
-  return json;
-}
+};
