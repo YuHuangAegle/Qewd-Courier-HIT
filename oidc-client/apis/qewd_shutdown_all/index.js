@@ -24,17 +24,59 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  1 November 2019
-
-  Example custom extraction/normalisation of fields from idToken to JWT
+  8 November 2019
 
 */
 
-module.exports = function(idToken, jwt) {
-  jwt.role = idToken.role;
-  jwt.firstName = idToken.given_name;
-  jwt.lastName = idToken.family_name;
-  jwt.nhsNumber = idToken.userId;
+var request = require('request');
+var oidc = require('../../configuration/oidc.json');
 
-  return {ok: true};
+module.exports = function(args, finished) {
+  var auth = args.req.headers.authorization;
+  var basicAuth = args.req.headers['x-authorization'];
+  if (!auth) {
+    return finished({error: 'Missing authorization header'});
+  }
+  if (!auth.startsWith('AccessToken ')) {
+    return finished({error: 'Invalid authorization header'});
+  }
+  var access_token = auth.split('AccessToken ')[1];
+  var client_id = 'qewd-monitor-ms';
+  var client_secret = oidc.oidc_provider.clients[client_id].client_secret;
+  var auth = 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64');
+  
+  var options = {
+    url: oidc.oidc_provider.host + '/openid/token/introspection',
+    headers: {
+      Authorization: auth
+    },
+    form: {
+      token: access_token
+    },
+    strictSSL: false
+  };
+
+  request.post(options, function(error, response, body) {
+
+    var results;
+    try {
+      results = JSON.parse(body);
+    }
+    catch(err) {
+      results = {};
+    }
+    //console.log('results = ' + JSON.stringify(results, null, 2));
+    if (results.active === true) {
+      // OK the access token was valid, so we can now send shutdown
+      // messages to all microservices
+      finished({
+        ok: true,
+        authorization: basicAuth,
+        oidc_provider: oidc.oidc_provider.host
+      });
+    }
+    else {
+      finished({error: 'Invalid request'});
+    }
+  });
 };

@@ -37,6 +37,12 @@ function sendError(error, res, status) {
 module.exports = async function(bodyParser, app, qewdRouter, config) {
   this.bodyParser = bodyParser;
   var _this = this;
+
+  app.use(function(req, res, next) {
+    console.log('** incoming url: ' + req.url + ': ' + req.method + ' *****');
+    return next();
+  });
+
   app.all('/oidc/*', async function(req, res, next) {
     console.log('!!! intercepted /oidc request');
     console.log('req.query: ' + JSON.stringify(req.query, null, 2));

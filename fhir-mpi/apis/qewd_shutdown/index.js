@@ -1,7 +1,7 @@
 /*
 
  ----------------------------------------------------------------------------
- | oidc-client: OIDC Client QEWD-Up MicroService                            |
+ | QEWD HIT Platform: QEWD Shutdown Handler                                 |
  |                                                                          |
  | Copyright (c) 2019 M/Gateway Developments Ltd,                           |
  | Redhill, Surrey UK.                                                      |
@@ -24,17 +24,10 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  1 November 2019
-
-  Example custom extraction/normalisation of fields from idToken to JWT
+  8 November 2019
 
 */
 
-module.exports = function(idToken, jwt) {
-  jwt.role = idToken.role;
-  jwt.firstName = idToken.given_name;
-  jwt.lastName = idToken.family_name;
-  jwt.nhsNumber = idToken.userId;
-
-  return {ok: true};
+module.exports = function(args, finished) {
+  finished({ok: true});
 };
