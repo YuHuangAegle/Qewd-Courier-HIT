@@ -223,11 +223,37 @@ module.exports = function() {
   };
 
   // -------------------------------------------------
-
-
-  this.shell('apt-get update');
+  this.shell('echo 11111111');
+  this.shell('which svn');
+  this.shell('pwd');
+  this.shell('mv /etc/apt/sources.list /etc/apt/sources.list.bak');
+  this.shell(`echo 'deb-src http://archive.ubuntu.com/ubuntu xenial main restricted #Added by software-properties' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial main restricted' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb-src http://mirrors.aliyun.com/ubuntu/ xenial main restricted multiverse universe #Added by software-properties' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb-src http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted multiverse universe #Added by software-properties' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial universe' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-updates universe' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial multiverse' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-updates multiverse' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb-src http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse #Added by software-properties' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://archive.canonical.com/ubuntu xenial partner' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb-src http://archive.canonical.com/ubuntu xenial partner' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb-src http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted multiverse universe #Added by software-properties' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-security universe' >> /etc/apt/sources.list`);
+this.shell(`echo 'deb  http://mirrors.aliyun.com/ubuntu/ xenial-security multiverse' >> /etc/apt/sources.list`);
+this.shell('cat /etc/apt/sources.list');
+this.shell('apt-get update');
   this.shell('apt-get install -y subversion');
-
+  this.shell('ls -la ~');
+  // this.shell('mkdir ~/.subversion');
+  // this.shell('chmod 777 ~/.subversion');
+  // this.shell(`echo '[global]' >> ~/.subversion/servers`);
+  // this.shell(`echo 'http-proxy-host = 192.168.1.114' >> ~/.subversion/servers`);
+  // this.shell(`echo 'http-proxy-port = 30082' >> ~/.subversion/servers`);
+this.shell('npm config set registry https://registry.npm.taobao.org');
   var ips = [];
   if (process.env.DOCKER_HOST) {
     ips = process.env.DOCKER_HOST.split('\n');
