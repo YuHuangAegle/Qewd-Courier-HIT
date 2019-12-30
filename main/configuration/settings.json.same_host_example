@@ -2,7 +2,7 @@
   "orchestrator": {
     "protocol": "http",
     "host": "192.168.1.100",
-    "port": 8080,
+    "port": 28080,
     "poolSize": 3,
     "applications": {
       "qewd-monitor-ms": "QEWD Monitor",
@@ -27,7 +27,7 @@
   "oidc_provider": {
     "protocol": "http",
     "host": "192.168.1.100",
-    "port": 8081,
+    "port": 28081,
     "poolSize": 3,
     "session_expiry": 1200000,
     "clients": {
@@ -50,7 +50,7 @@
   },
   "openehr": {
     "host": "192.168.1.100",
-    "port": 8000
+    "port": 28000
   },
   "jwt_secret": "=> createUuid()",
   "volume_path": "~/qewd-hit-platform",
