@@ -768,7 +768,7 @@ this.shell('npm config set registry https://registry.npm.taobao.org');
   if (!fs.existsSync(yottadb_path)) {
     fs.ensureDirSync(yottadb_path);
     ydb_path = yottadb_path + '/main';
-    this.shell('svn export https://github.com/robtweed/yotta-gbldir-files/trunk/r1.28/' + os + '  ' + ydb_path);
+    // this.shell('svn export https://github.com/robtweed/yotta-gbldir-files/trunk/r1.28/' + os + '  ' + ydb_path);
     fs.copySync(ydb_path, yottadb_path + '/openehr-ms');
     fs.copySync(ydb_path, yottadb_path + '/audit-ms');
     fs.copySync(ydb_path, yottadb_path + '/fhir-mpi');
@@ -787,7 +787,7 @@ this.shell('npm config set registry https://registry.npm.taobao.org');
 
   if (!fs.existsSync(ethercis_db_path + '/pgdata')) {
     fs.ensureDirSync(ethercis_db_path);
-    this.shell('svn export ' + repo_path + '  ' + ethercis_db_path);
+    // this.shell('svn export ' + repo_path + '  ' + ethercis_db_path);
     this.shell('tar -xvf ' + ethercis_db_path + '/' + tar_file + ' -C ' + ethercis_db_path );
   }
 
@@ -801,7 +801,7 @@ this.shell('npm config set registry https://registry.npm.taobao.org');
 
   if (!fs.existsSync(ethercis_server_path + '/config')) {
     fs.ensureDirSync(ethercis_server_path);
-    this.shell('svn export ' + repo_path + '  ' + ethercis_server_path + '/config');
+    // this.shell('svn export ' + repo_path + '  ' + ethercis_server_path + '/config');
   }
 
   console.log(' ');
@@ -885,14 +885,14 @@ this.shell('npm config set registry https://registry.npm.taobao.org');
   // Load PulseTile
 
   var pulsetile_path = '/node/main/orchestrator/www/pulsetile';
-  fs.removeSync(pulsetile_path); // in case a previous copy is there
-  this.shell('svn export https://github.com/PulseTile/PulseTile-RA-Lerna/trunk/projects/showcase-light/build ' + pulsetile_path);
+  //fs.removeSync(pulsetile_path); // in case a previous copy is there
+  //this.shell('svn export https://github.com/PulseTile/PulseTile-RA-Lerna/trunk/projects/showcase-light/build ' + pulsetile_path);
 
   // Load additional templates
 
   var templates_path = '/node/openehr-ms/templates';
-  fs.removeSync(templates_path);
-  this.shell('svn export https://github.com/QEWD-Courier/Qewd-HIT-json-transforms/branches/develop/clinical-headings-templates ' + templates_path);
+  //fs.removeSync(templates_path);
+  //this.shell('svn export https://github.com/QEWD-Courier/Qewd-HIT-json-transforms/branches/develop/clinical-headings-templates ' + templates_path);
 
   // save PulseTile URL rewrite rules file to Orchestrator
 
